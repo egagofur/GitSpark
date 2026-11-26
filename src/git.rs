@@ -718,7 +718,7 @@ impl GitClient {
         } else {
             format!("{target_branch}..HEAD")
         };
-        let commits = self.fetch_history_for_revision(&repo_path, &detail_revision, 100)?;
+        let commits = self.fetch_history_for_revision(&repo_path, &detail_revision, 5000)?;
         let detail_range = if behind > 0 {
             format!("HEAD...{target_branch}")
         } else {
@@ -1646,7 +1646,7 @@ impl GitClient {
 
         let branches = self.list_branches(repo_path)?;
         let diffs = self.build_diffs(repo_path, &status.changes)?;
-        let history = self.fetch_history(repo_path, 100).unwrap_or_default();
+        let history = self.fetch_history(repo_path, 5000).unwrap_or_default();
         let tags = self.list_tags(repo_path).unwrap_or_default();
         let stash_count = self.stash_count(repo_path).unwrap_or(0);
         let remote_name = self.read_primary_remote(repo_path).unwrap_or(None);

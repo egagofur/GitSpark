@@ -1,0 +1,19 @@
+name: Custom macOS Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release binary
+        run: cargo build --release
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitspark-macos-arm64
+          path: target/release/gitspark
