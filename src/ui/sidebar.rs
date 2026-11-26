@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::scroll::ScrollableElement;
+use gpui_component::scroll::{ScrollableElement, Scrollbar};
 use gpui_component::{Icon, IconName, h_flex, v_flex};
 
 use crate::models::{ChangeEntry, CommitInfo};
@@ -347,7 +347,19 @@ pub fn render_sidebar_interactive(
                     .child(render_empty_state("No history"))
                     .into_any_element()
             } else {
-                let history_snapshot: Vec<CommitInfo> = history.to_vec();
+                let ptr = history.as_ptr() as usize;
+                let len = history.len();
+                let history_snapshot = {
+                    let mut cache = app.history_arc_cache.borrow_mut();
+                    match cache.as_ref() {
+                        Some((c_ptr, c_len, arc)) if *c_ptr == ptr && *c_len == len => arc.clone(),
+                        _ => {
+                            let arc = std::sync::Arc::new(history.to_vec());
+                            *cache = Some((ptr, len, arc.clone()));
+                            arc
+                        }
+                    }
+                };
                 let sel = selected_commit.clone();
                 // History during a branch comparison shows the OTHER branch's
                 // commits, not this one's — "ahead of origin" doesn't apply to
@@ -361,12 +373,13 @@ pub fn render_sidebar_interactive(
                 };
                 div()
                     .id("history-scroll")
+                    .relative()
                     .flex_1()
                     .min_h_0()
-                    .overflow_y_scrollbar()
                     .child(
                         uniform_list("history-list", history_snapshot.len(), {
                             let view = view.clone();
+                            let history_snapshot = history_snapshot.clone();
                             move |range, _win, _cx| {
                                 range
                                     .map(|ix| {
@@ -404,9 +417,11 @@ pub fn render_sidebar_interactive(
                                     .collect()
                             }
                         })
-                        .flex_1()
-                        .with_sizing_behavior(ListSizingBehavior::Infer),
+                        .track_scroll(app.history_scroll_handle.clone())
+                        .size_full()
+                        .with_sizing_behavior(ListSizingBehavior::Auto),
                     )
+                    .child(Scrollbar::vertical(&app.history_scroll_handle))
                     .into_any_element()
             }
         }
